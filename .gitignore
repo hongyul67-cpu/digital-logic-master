@@ -8,3 +8,7 @@ Thumbs.db
 
 # 원자료(교과서 스캔·기출 PDF 등)는 공개 저장소에 올리지 않습니다.
 _src/
+
+# 평문 원본 — 커밋 금지 (bank.enc 만 배포)
+content.js
+_chk.js
