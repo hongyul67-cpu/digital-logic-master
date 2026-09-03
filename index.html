@@ -166,7 +166,7 @@ table.kmap td button.sel{outline:3px solid var(--pu);outline-offset:-3px}
 }
 </style>
 </head>
-<body data-build="46db785c">
+<body data-build="6bd22bc2">
 
 <!-- 게이트 기호 — 직접 그린 SVG (외부 이미지는 언젠가 깨집니다) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -263,8 +263,8 @@ const ri = n => Math.floor(Math.random()*n);
 
 const ST = load();
 function load(){
-  try{ return Object.assign({wrong:[],read:{},best:{}}, JSON.parse(localStorage.getItem(CFG.storeKey)||'{}')); }
-  catch(e){ return {wrong:[],read:{},best:{}}; }
+  try{ return Object.assign({wrong:[],read:{},best:{},scope:'exam'}, JSON.parse(localStorage.getItem(CFG.storeKey)||'{}')); }
+  catch(e){ return {wrong:[],read:{},best:{},scope:'exam'}; }
 }
 function save(){ try{ localStorage.setItem(CFG.storeKey, JSON.stringify(ST)); }catch(e){} }
 
@@ -346,13 +346,68 @@ function renderLearn(v){
 /* ══════════════════ 문제 풀이 ══════════════════
    연습 : 고르는 즉시 정답·해설 공개, 점수 실시간, 연출 있음
    종합 : 아무것도 알려주지 않음, 점수 감춤, 연출 없음 (규약 2) */
+/* 범위 —  Ⅴ~Ⅶ단원을 늘리면서 무작위로 뽑으면 지필평가 범위(Ⅰ~Ⅳ) 밖 문항이
+   절반 넘게 나오게 되었다. 그래서 시작 전에 범위를 고르게 한다. 기본은 시험 범위. */
+const SCOPES = [
+  { id:'exam', name:'Ⅰ~Ⅳ단원 (지필평가 범위)', has:q => ['Ⅰ','Ⅱ','Ⅲ','Ⅳ'].includes(q.u) },
+  { id:'all',  name:'전 단원 Ⅰ~Ⅶ',             has:q => true },
+  { id:'app',  name:'Ⅴ~Ⅶ단원 (응용·순서 회로)', has:q => ['Ⅴ','Ⅵ','Ⅶ'].includes(q.u) },
+];
+const UNITS = ['Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ','Ⅵ','Ⅶ'];
+function scopeFilter(id){
+  const s = SCOPES.find(x=>x.id===id);
+  if(s) return s.has;
+  if(UNITS.includes(id)) return q => q.u===id;
+  return q => true;
+}
+function scopeName(id){
+  const s = SCOPES.find(x=>x.id===id);
+  return s ? s.name : (UNITS.includes(id) ? id+'단원만' : '전 단원');
+}
+function inScope(id){ return QUESTIONS.filter(scopeFilter(id)); }
+
 function startQuiz(v, mode){
   const n = mode==='exam' ? CFG.examN : CFG.practiceN;
-  quiz = { mode, i:0, correct:0, picks:[],
-           list: shuffle(QUESTIONS.slice()).slice(0, Math.min(n, QUESTIONS.length)),
-           startTime: Date.now() };
-  if(!quiz.list.length){ v.appendChild(el('<div class="empty">문항이 아직 없습니다.</div>')); return; }
-  drawQ(v);
+  const part = mode==='exam' ? '종합시험' : '연습';
+  if(!QUESTIONS.length){ v.appendChild(el('<div class="empty">문항이 아직 없습니다.</div>')); return; }
+
+  const c = el('<div class="card">'
+    + '<h3>'+(mode==='exam'?'🏁 종합시험 '+n+'문항':'✏️ 연습 '+n+'문항')+'</h3>'
+    + '<div class="muted">어느 범위에서 낼지 고르세요. 다음에도 이 범위가 기억됩니다.</div>'
+    + '<div class="units" id="scChips" style="margin-top:12px"></div>'
+    + '<div class="row" style="margin-top:6px">'
+    + '<button class="btn btn-primary" id="scGo"></button>'
+    + '<span class="muted" id="scMsg"></span></div></div>');
+  v.appendChild(c);
+
+  const chips = c.querySelector('#scChips');
+  const go = c.querySelector('#scGo'), msg = c.querySelector('#scMsg');
+  function paint(){
+    chips.innerHTML = '';
+    SCOPES.concat(UNITS.map(u=>({id:u, name:u+'단원'}))).forEach(o=>{
+      const cnt = inScope(o.id).length;
+      const b = el('<button class="unit'+(ST.scope===o.id?' on':'')+'">'+o.name
+        + ' <span style="opacity:.75">'+cnt+'</span></button>');
+      b.onclick = ()=>{ ST.scope=o.id; save(); paint(); };
+      chips.appendChild(b);
+    });
+    const cnt = inScope(ST.scope).length;
+    go.textContent = '시작하기 →';
+    go.disabled = cnt===0;
+    msg.textContent = cnt===0 ? '이 범위에는 문항이 없습니다.'
+      : (cnt < n ? scopeName(ST.scope)+' 은(는) '+cnt+'문항뿐이라 '+cnt+'문항으로 봅니다.'
+                 : scopeName(ST.scope)+' '+cnt+'문항 중 '+n+'문항을 뽑습니다.');
+  }
+  paint();
+
+  go.onclick = ()=>{
+    const pool = inScope(ST.scope);
+    if(!pool.length) return;
+    quiz = { mode, i:0, correct:0, picks:[], scope:ST.scope,
+             list: shuffle(pool.slice()).slice(0, Math.min(n, pool.length)),
+             startTime: Date.now() };
+    drawQ(v);
+  };
 }
 
 function drawQ(v){
@@ -426,7 +481,10 @@ function finish(v){
   const n   = quiz.list.length;
   const pct = Math.round(quiz.correct / n * 100);
   const sec = Math.round((Date.now() - quiz.startTime)/1000);
-  const part = quiz.mode==='exam' ? '종합시험' : '연습';
+  const tag = quiz.scope==='exam' ? 'Ⅰ~Ⅳ단원'
+            : quiz.scope==='app'  ? 'Ⅴ~Ⅶ단원'
+            : quiz.scope==='all'  ? '전 단원' : quiz.scope+'단원';
+  const part = (quiz.mode==='exam' ? '종합시험' : '연습') + ' ' + tag;
 
   v.innerHTML = '';
   v.appendChild(el('<div class="card" style="text-align:center">'
@@ -703,6 +761,8 @@ const TARGETS = [
   { t:'반비교기의 L (A < B)', y:[0,1,0,0] },
   { t:'NAND — (A·B)′', y:[1,1,1,0] },
   { t:'NOR — (A+B)′', y:[1,0,0,0] },
+  { t:'A 가 1이고 B 가 0일 때만 0 (A′ + B)', y:[1,1,0,1] },
+  { t:'2×4 디코더의 출력 Y₁ (A=0, B=1 일 때만 1)', y:[0,1,0,0] },
 ];
 
 function gameBuild(v){
