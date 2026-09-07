@@ -40,7 +40,8 @@ def extract_json():
     정규식으로 뜨려 하면 반드시 어딘가에서 깨진다. 자바스크립트에게 맡긴다."""
     driver = (
         "const c = require('./content.js');\n"
-        "process.stdout.write(JSON.stringify({v:1, learn:c.LEARN, questions:c.QUESTIONS}));\n"
+        "process.stdout.write(JSON.stringify("
+        "{v:1, learn:c.LEARN, questions:c.QUESTIONS, slides:c.SLIDES||[]}));\n"
     )
     with tempfile.NamedTemporaryFile("w", suffix=".js", dir=HERE, delete=False, encoding="utf-8") as f:
         f.write(driver)
@@ -71,6 +72,7 @@ def main():
     payload = extract_json()
     data = json.loads(payload)
     learn, qs = data["learn"], data["questions"]
+    slides = data.get("slides") or []
     raw = payload.encode("utf-8")
     gz = gzip.compress(raw, 9)
 
@@ -110,7 +112,7 @@ def main():
     build_id = secrets.token_hex(4)
     io.open(OUT, "w", encoding="utf-8").write(json.dumps({
         "v": 1, "cipher": "AES-GCM", "gz": True,
-        "n": len(qs), "secs": len(learn), "build": build_id,
+        "n": len(qs), "secs": len(learn), "slides": len(slides), "build": build_id,
         "kdf": {"name": "PBKDF2", "hash": "SHA-256", "iter": ITER,
                 "salt": base64.b64encode(salt).decode()},
         "data": base64.b64encode(body).decode(),
@@ -133,8 +135,14 @@ def main():
     for q in qs:
         qu[q["u"]] = qu.get(q["u"], 0) + 1
 
+    su = {}
+    for s in slides:
+        k = s["u"].split(".")[0]
+        su[k] = su.get(k, 0) + 1
+
     print("  개념 %d개 %s" % (len(learn), json.dumps(units, ensure_ascii=False)))
     print("  문항 %d개 %s" % (len(qs), json.dumps(qu, ensure_ascii=False)))
+    print("  슬라이드 %d장 %s" % (len(slides), json.dumps(su, ensure_ascii=False)))
     print("  원본 %dKB -> gzip %dKB -> bank.enc %dKB  (빌드 표식 %s)"
           % (len(raw) // 1024, len(gz) // 1024, os.path.getsize(OUT) // 1024, build_id))
     cur = weekly.this_week(cfg)

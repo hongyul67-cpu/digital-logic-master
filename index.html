@@ -69,6 +69,36 @@ svg.gs{width:90px;height:50px;display:block}
    <use> 는 그림자 DOM 으로 복제되므로 여기서 쓴 선택자(.bd/.ln)가 닿지 않습니다.
    처음에 CSS 로만 두었더니 게이트가 전부 검게 칠해진 덩어리로 나왔습니다. */
 
+/* 수업 슬라이드 안의 그림 — board-pro 의 그림칸은 짙은 남색(#0f1a27)이다.
+   게이트 기호와 표는 짙은 색으로 그려져 있으므로 반드시 흰 판 위에 올린다.
+   처음에 그냥 얹었더니 검은 선이 검은 바탕에 묻혀 아무것도 안 보였다. */
+/* .bp-fig 는 가운데로 모으는 flex 상자다. width:100% 를 주지 않으면
+   흰 판이 글자 크기만큼 쪼그라들어 화면 한복판에 우표처럼 붙는다. */
+.sl-w{background:#fff;color:#1c2430;border-radius:12px;padding:10px 12px;
+      width:100%;max-height:100%;overflow:auto;box-sizing:border-box}
+.sl-s{width:100%;height:auto;max-height:38vh;display:block}
+/* 열 너비를 고르게 — table-layout:fixed 가 없으면 「S (합)」 한 칸이 표의 절반을
+   차지해 진리표가 교실 뒤에서 읽히지 않는다. 그래서 줄바꿈도 막지 않는다. */
+table.sl-t{border-collapse:collapse;width:100%;table-layout:fixed;
+      font-size:clamp(12px,1.15vw,20px)}
+table.sl-t th,table.sl-t td{border:1px solid #c8d0da;padding:5px 8px;text-align:center;
+      word-break:keep-all}
+table.sl-t th{background:#eef2f7;font-weight:800}
+table.sl-t td.hi{background:#f7f9fc;font-weight:800}
+/* 맨 앞 칸이 이름표인 표(hi:[0])만 왼쪽으로 붙인다 */
+table.sl-t td.hi:first-child{text-align:left}
+table.sl-k td{font-size:clamp(15px,1.5vw,26px);font-weight:800;width:16%}
+.sl-g{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+.sl-g figure{margin:0;width:clamp(74px,8vw,116px);text-align:center}
+.sl-g figure svg{width:100%;height:auto}
+.sl-g figcaption{font-size:clamp(11px,.95vw,15px);font-weight:800;color:#5b6472;margin-top:-3px}
+.sl-st{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}
+.sl-st .bx{border:2px solid #1c6dd0;border-radius:11px;padding:7px 11px;font-weight:800;
+      font-size:clamp(12px,1.2vw,21px);text-align:center;line-height:1.35}
+.sl-st .bx small{display:block;font-weight:600;color:#5b6472;font-size:.78em;margin-top:2px}
+.sl-st .ar{font-size:clamp(14px,1.4vw,25px);color:#1c6dd0;font-weight:900}
+.sl-f{font-size:clamp(13px,1.35vw,24px);font-weight:700;line-height:2;text-align:center}
+
 /* 문제 */
 .qnum{color:var(--dim);font-size:13px;font-weight:700}
 .qtext{font-size:17px;font-weight:700;margin:6px 0 12px;line-height:1.55}
@@ -166,7 +196,7 @@ table.kmap td button.sel{outline:3px solid var(--pu);outline-offset:-3px}
 }
 </style>
 </head>
-<body data-build="6bd22bc2">
+<body data-build="ff8bb6a1">
 
 <!-- 게이트 기호 — 직접 그린 SVG (외부 이미지는 언젠가 깨집니다) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -236,6 +266,7 @@ table.kmap td button.sel{outline:3px solid var(--pu);outline-offset:-3px}
     <button class="tab"    data-view="practice">✏️ 연습 8문항</button>
     <button class="tab"    data-view="exam">🏁 종합시험 20문항</button>
     <button class="tab"    data-view="wrong">📕 오답노트</button>
+    <button class="tab boardbtn" type="button" onclick="openBoardPro()">📽️ 수업 슬라이드 열기</button>
   </div>
 
   <div id="view"></div>
@@ -252,7 +283,7 @@ table.kmap td button.sel{outline:3px solid var(--pu);outline-offset:-3px}
    ══════════════════════════════════════════════════════════════ */
 'use strict';
 
-let LEARN = [], QUESTIONS = [];
+let LEARN = [], QUESTIONS = [], SLIDES = [];
 const CFG = { practiceN:8, examN:20, storeKey:'digital-logic-master_v1' };
 
 const $  = s => document.querySelector(s);
@@ -274,7 +305,7 @@ let curView = 'learn';
 let tick = null;        // 속도전 타이머 — 화면을 옮길 때 반드시 끕니다
 
 /* ── 화면 전환 ── */
-document.querySelectorAll('.tab').forEach(t=>{
+document.querySelectorAll('.tab:not(.boardbtn)').forEach(t=>{
   t.onclick = ()=>{
     document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
     t.classList.add('on');
@@ -293,6 +324,128 @@ function render(view){
   if(view==='wrong')    return renderWrong(v);
 }
 function goTab(name){ document.querySelector('[data-view="'+name+'"]').click(); }
+
+/* ══════════════════ 수업 슬라이드 (교실 화면용) ══════════════════
+   배우기는 학생이 혼자 읽는 줄글 카드이고, 이것은 교실 앞에 띄우는 슬라이드입니다.
+   배우기를 대신하지 않습니다 — 같은 내용의 한 벌이 더 있는 것입니다.
+
+   원고는 content.js 의 SLIDES(→ bank.enc 안), 화면은 links 의 공용 board-pro.js 입니다.
+   ⚠ 게이트 기호(#g-and …)는 stroke 가 짙은 색이라 슬라이드의 어두운 바탕에서는
+     그대로 두면 보이지 않습니다. 반드시 .sl-w(흰 판) 위에 올립니다. */
+
+/* 표 그림 — tbl:{h:[머리], r:[[줄]], hi:[굵게 쓸 열 번호]} */
+function slTable(t){
+  const hi = t.hi || [];
+  return '<table class="sl-t">'
+    + (t.h ? '<tr>' + t.h.map(c=>'<th>'+c+'</th>').join('') + '</tr>' : '')
+    + (t.r||[]).map(row => '<tr>' + row.map((c,i)=>
+        '<td'+(hi.includes(i)?' class="hi"':'')+'>'+c+'</td>').join('') + '</tr>').join('')
+    + '</table>';
+}
+
+/* 직접 그린 그림 — 슬라이드의 art:'키' 로 부릅니다 */
+const ART = {
+  /* 아날로그(이어지는 곡선) 와 디지털(계단) */
+  'wave-ad': () => '<div class="sl-w"><svg viewBox="0 0 620 190" class="sl-s">'
+    + '<path d="M20 60 C70 10 110 100 160 55 C210 12 250 96 300 58 C350 20 390 92 440 60 C490 30 540 70 600 48" fill="none" stroke="#1c6dd0" stroke-width="3.4"/>'
+    + '<text x="20" y="26" font-size="17" font-weight="700" fill="#1c6dd0">아날로그</text>'
+    + '<path d="M20 175 H90 V125 H160 V175 H230 V125 H300 V175 H370 V125 H440 V175 H510 V125 H600" fill="none" stroke="#0f9d58" stroke-width="3.4"/>'
+    + '<text x="20" y="115" font-size="17" font-weight="700" fill="#0f9d58">디지털</text>'
+    + '</svg></div>',
+
+  /* 클록 펄스 — 상승·하강 에지·주기·폭 */
+  'wave-clk': () => '<div class="sl-w"><svg viewBox="0 0 620 190" class="sl-s">'
+    + '<path d="M30 150 H100 V70 H190 V150 H280 V70 H370 V150 H460 V70 H550 V150 H600" fill="none" stroke="#1c2430" stroke-width="3.4"/>'
+    + '<path d="M100 165 V55 M190 165 V55" stroke="#c62828" stroke-width="1.3" stroke-dasharray="5 4"/>'
+    + '<text x="72" y="42" font-size="15" font-weight="700" fill="#c62828">상승 에지</text>'
+    + '<text x="176" y="42" font-size="15" font-weight="700" fill="#1565c0">하강 에지</text>'
+    + '<path d="M100 178 H280" stroke="#5b6472" stroke-width="1.6" marker-start="url(#slA)" marker-end="url(#slA)"/>'
+    + '<text x="176" y="172" font-size="15" font-weight="700" fill="#5b6472">주기</text>'
+    + '<path d="M100 96 H190" stroke="#0f9d58" stroke-width="1.6" marker-start="url(#slA)" marker-end="url(#slA)"/>'
+    + '<text x="132" y="90" font-size="15" font-weight="700" fill="#0f9d58">폭</text>'
+    + '<defs><marker id="slA" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto">'
+    + '<path d="M0 0 L10 5 L0 10 z" fill="#5b6472"/></marker></defs>'
+    + '</svg></div>',
+
+  /* 게이트 기호 8종 — index.html 의 <defs> 를 그대로 재사용 */
+  gates: () => '<div class="sl-w sl-g">'
+    + [['g-and','AND'],['g-or','OR'],['g-not','NOT'],['g-nand','NAND'],
+       ['g-nor','NOR'],['g-xor','XOR'],['g-xnor','XNOR'],['g-buf','버퍼']]
+      .map(([id,nm]) => '<figure><svg viewBox="0 0 90 50"><use href="#'+id+'"/></svg>'
+        + '<figcaption>'+nm+'</figcaption></figure>').join('')
+    + '</div>',
+
+  /* A/D 변환 3단계 */
+  'steps-ad': () => slSteps(['표본화<tspan>일정한 시간 간격으로</tspan>',
+                             '양자화<tspan>레벨을 정수 값으로</tspan>',
+                             '부호화<tspan>0과 1의 2진 데이터로</tspan>']),
+  /* 보수를 이용한 뺄셈 */
+  'steps-comp': () => slSteps(['보수를 구한다<tspan>감수(빼는 수)의</tspan>',
+                               '피감수와 더한다<tspan>뺄셈이 덧셈이 된다</tspan>',
+                               '자리 올림수 처리<tspan>1의 보수는 더하고 2의 보수는 버린다</tspan>']),
+  /* 조합 논리 회로 설계 5단계 */
+  'steps-design5': () => slSteps(['① 설계 조건 분석','② 입출력 변수 결정','③ 진리표 작성',
+                                  '④ 논리식 유도·간소화','⑤ 논리 회로도 작성']),
+
+  /* 진수의 전개식 */
+  radix: () => '<div class="sl-w sl-f">'
+    + '<div>(1010)<sub>2</sub> = 1×2<sup>3</sup> + 0×2<sup>2</sup> + 1×2<sup>1</sup> + 0×2<sup>0</sup> = 10</div>'
+    + '<div>(1D)<sub>16</sub> = 1×16<sup>1</sup> + 13×16<sup>0</sup> = 29</div>'
+    + '</div>',
+
+  /* 카노 맵 — 축이 그레이 코드 순서인 것을 보이는 그림 */
+  'kmap-gray': () => slKmap([['','00','01','11','10'],
+                             ['0','1','1','0','0'],
+                             ['1','0','1','1','0']], 'A ＼ BC'),
+  /* 양쪽 끝이 이어져 묶이는 그림 */
+  'kmap-wrap': () => slKmap([['','00','01','11','10'],
+                             ['0','①','0','0','①'],
+                             ['1','①','0','0','①']], 'A ＼ BC'),
+  /* 임의 상태 */
+  'kmap-dc':   () => slKmap([['','00','01','11','10'],
+                             ['0','1','1','×','0'],
+                             ['1','0','1','×','×']], 'A ＼ BC'),
+};
+
+function slSteps(list){
+  return '<div class="sl-w sl-st">'
+    + list.map((s,i) => (i?'<span class="ar">→</span>':'')
+        + '<div class="bx">' + s.replace('<tspan>','<small>').replace('</tspan>','</small>') + '</div>')
+      .join('') + '</div>';
+}
+function slKmap(rows, corner){
+  return '<div class="sl-w"><table class="sl-t sl-k">'
+    + rows.map((r,ri) => '<tr>' + r.map((c,ci) =>
+        (ri===0||ci===0) ? '<th>'+(ri===0&&ci===0?corner:c)+'</th>' : '<td>'+c+'</td>'
+      ).join('') + '</tr>').join('')
+    + '</table></div>';
+}
+
+function openBoardPro(){
+  if(!window.BoardPro || !SLIDES.length){
+    alert('수업 슬라이드를 불러오지 못했습니다. 잠금을 먼저 풀어 주세요.'); return;
+  }
+  const units = [...new Set(SLIDES.map(s=>s.u))];
+  const menu = units.map(u=>{
+    const list = SLIDES.filter(s=>s.u===u);
+    return { icon:'🔌', title:u, desc:'슬라이드 '+list.length+'장 · '+list[0].t,
+             run:{ kind:'lesson', deck:list } };
+  });
+  menu.push({ icon:'📚', wide:true, title:'전체 이어서 ('+SLIDES.length+'장)',
+              desc:'Ⅰ단원부터 Ⅶ단원까지 순서대로 진행합니다.',
+              run:{ kind:'lesson', deck:SLIDES } });
+  menu.push({ icon:'⬜', wide:true, title:'빈 칠판',
+              desc:'슬라이드 없이 판서만. 진리표를 직접 채워 볼 때.',
+              run:{ kind:'blank' } });
+  BoardPro.open({
+    title:'📽️ 디지털 논리 회로 · 수업 슬라이드',
+    sub:'요점 → <b>발문</b> → 퀴즈 → 정답을 하나씩 열며 진행하고, 화면 어디든 손이나 펜으로 바로 판서할 수 있습니다.<br>'
+      + '요점 속 <b>파란 빈칸</b>은 눌러야 답이 보입니다.',
+    menu: menu,
+    fig: s => s.tbl ? '<div class="sl-w">'+slTable(s.tbl)+'</div>'
+                    : (s.art && ART[s.art]) ? ART[s.art]() : ''
+  });
+}
 
 /* ══════════════════ 배우기 ══════════════════
    정답을 다 보여 주는 단계입니다. 테스트보다 반드시 앞에 둡니다. */
@@ -1246,6 +1399,7 @@ async function unlockBank(pw, quiet){
     const payload = JSON.parse(txt);
     LEARN = payload.learn || [];
     QUESTIONS = payload.questions || [];
+    SLIDES = payload.slides || [];      /* 수업 슬라이드도 잠금 안에 들어 있습니다 */
 
     try{
       localStorage.setItem(LOCK_KEY, pw);
@@ -1257,7 +1411,8 @@ async function unlockBank(pw, quiet){
       const cd = await weekCode(info.ms, mondayOf(new Date()));
       extra = '<br><b style="color:var(--pu)">이번 주 학생 코드 — ' + prettyCode(cd) + '</b>';
     }
-    say('✅ 개념 '+LEARN.length+'개 · 문항 '+QUESTIONS.length+'개가 열렸어요!' + extra, 'ok');
+    say('✅ 개념 '+LEARN.length+'개 · 문항 '+QUESTIONS.length+'개 · 수업 슬라이드 '
+        + SLIDES.length + '장이 열렸어요!' + extra, 'ok');
     boot();
     setTimeout(()=>{ $('#lock').hidden = true; }, extra ? 2600 : 400);
     return true;
@@ -1274,6 +1429,7 @@ async function unlockBank(pw, quiet){
 function boot(){
   $('#app').hidden = false;
   $('#hdSub').textContent = '개념 '+LEARN.length+' · 문항 '+QUESTIONS.length
+    + (SLIDES.length ? ' · 슬라이드 '+SLIDES.length : '')
     + (window.FixOrder && FixOrder.on ? ' · 수업용 고정 순서' : '');
   render('learn');
 }
@@ -1304,8 +1460,12 @@ fetch('bank.enc',{cache:'no-store'}).then(r=>r.json())
 <script src="https://hongyul67-cpu.github.io/links/collector.js"  data-tool="디지털논리회로 마스터"></script>
 <script src="https://hongyul67-cpu.github.io/links/fx.js"></script>
 <script src="https://hongyul67-cpu.github.io/links/rank.js"       data-tool="디지털논리회로" data-pace="class"></script>
-<script src="https://hongyul67-cpu.github.io/links/class-mode.js"></script>
 <script src="https://hongyul67-cpu.github.io/links/reset.js"></script>
 <script src="https://hongyul67-cpu.github.io/links/backbar.js"></script>
+
+<!-- 수업 슬라이드 : 원고(SLIDES)는 bank.enc 안에 있고, 화면은 links 의 공용 board-pro.js 다.
+     사본을 이 저장소에 두지 않는다 — 예전에 board.js 가 7가지로 갈라진 원인이었다.
+     뒤로 · 기록 초기화 · 계급 배지 · 평가 기준(#rb-btn)은 공용 board-pro.js 가 가린다. -->
+<script src="https://hongyul67-cpu.github.io/links/board-pro.js"></script>
 </body>
 </html>
