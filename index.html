@@ -7,6 +7,9 @@
 <meta name="description" content="디지털 논리 회로 Ⅰ~Ⅶ단원 배우기 · 게이트 게임 · 종합시험">
 <!-- 수업용 「모두 같은 문제」 — 다른 공용 스크립트보다 먼저 -->
 <script src="https://hongyul67-cpu.github.io/links/fixorder.js"></script>
+<!-- 그림 — 공용 도우미(fig.js)와 이 도구의 그림 모음(figs.js). 배우기 카드와 수업 슬라이드가 같은 그림을 쓴다 -->
+<script src="https://hongyul67-cpu.github.io/links/fig.js"></script>
+<script src="figs.js"></script>
 <style>
 :root{
   --bg:#f5f6f8; --card:#fff; --line:#e2e5ea; --tx:#1c2430; --dim:#6b7684;
@@ -60,6 +63,10 @@ table.tb td{background:#fff}
 table.tb td:not(:empty){white-space:normal}
 table.tb.qt{margin:10px 0}
 
+/* 배우기 카드의 그림 (figs.js) */
+.lfig{margin:10px 0 14px}
+.lfig figure.fig figcaption{color:var(--dim)}
+
 /* 게이트 기호 */
 .gates{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
 .gates figure{margin:0;width:96px;text-align:center}
@@ -88,6 +95,11 @@ table.sl-t td.hi{background:#f7f9fc;font-weight:800}
 /* 맨 앞 칸이 이름표인 표(hi:[0])만 왼쪽으로 붙인다 */
 table.sl-t td.hi:first-child{text-align:left}
 table.sl-k td{font-size:clamp(15px,1.5vw,26px);font-weight:800;width:16%}
+/* 그림 + 표 나란히 — 좁으면 위아래로 */
+.sl-two{display:flex;gap:12px;align-items:center}
+.sl-two .sl-f2{flex:1.25 1 0;min-width:0}
+.sl-two .sl-t2{flex:1 1 0;min-width:0}
+@media (max-width:700px){.sl-two{flex-direction:column}}
 .sl-g{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
 .sl-g figure{margin:0;width:clamp(74px,8vw,116px);text-align:center}
 .sl-g figure svg{width:100%;height:auto}
@@ -196,7 +208,7 @@ table.kmap td button.sel{outline:3px solid var(--pu);outline-offset:-3px}
 }
 </style>
 </head>
-<body data-build="ff8bb6a1">
+<body data-build="b69bcc1a">
 
 <!-- 게이트 기호 — 직접 그린 SVG (외부 이미지는 언젠가 깨집니다) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -345,27 +357,7 @@ function slTable(t){
 
 /* 직접 그린 그림 — 슬라이드의 art:'키' 로 부릅니다 */
 const ART = {
-  /* 아날로그(이어지는 곡선) 와 디지털(계단) */
-  'wave-ad': () => '<div class="sl-w"><svg viewBox="0 0 620 190" class="sl-s">'
-    + '<path d="M20 60 C70 10 110 100 160 55 C210 12 250 96 300 58 C350 20 390 92 440 60 C490 30 540 70 600 48" fill="none" stroke="#1c6dd0" stroke-width="3.4"/>'
-    + '<text x="20" y="26" font-size="17" font-weight="700" fill="#1c6dd0">아날로그</text>'
-    + '<path d="M20 175 H90 V125 H160 V175 H230 V125 H300 V175 H370 V125 H440 V175 H510 V125 H600" fill="none" stroke="#0f9d58" stroke-width="3.4"/>'
-    + '<text x="20" y="115" font-size="17" font-weight="700" fill="#0f9d58">디지털</text>'
-    + '</svg></div>',
-
-  /* 클록 펄스 — 상승·하강 에지·주기·폭 */
-  'wave-clk': () => '<div class="sl-w"><svg viewBox="0 0 620 190" class="sl-s">'
-    + '<path d="M30 150 H100 V70 H190 V150 H280 V70 H370 V150 H460 V70 H550 V150 H600" fill="none" stroke="#1c2430" stroke-width="3.4"/>'
-    + '<path d="M100 165 V55 M190 165 V55" stroke="#c62828" stroke-width="1.3" stroke-dasharray="5 4"/>'
-    + '<text x="72" y="42" font-size="15" font-weight="700" fill="#c62828">상승 에지</text>'
-    + '<text x="176" y="42" font-size="15" font-weight="700" fill="#1565c0">하강 에지</text>'
-    + '<path d="M100 178 H280" stroke="#5b6472" stroke-width="1.6" marker-start="url(#slA)" marker-end="url(#slA)"/>'
-    + '<text x="176" y="172" font-size="15" font-weight="700" fill="#5b6472">주기</text>'
-    + '<path d="M100 96 H190" stroke="#0f9d58" stroke-width="1.6" marker-start="url(#slA)" marker-end="url(#slA)"/>'
-    + '<text x="132" y="90" font-size="15" font-weight="700" fill="#0f9d58">폭</text>'
-    + '<defs><marker id="slA" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto">'
-    + '<path d="M0 0 L10 5 L0 10 z" fill="#5b6472"/></marker></defs>'
-    + '</svg></div>',
+  /* 아날로그·디지털 파형, 클록 펄스, 카노 맵 3장은 figs.js 로 옮겼다(배우기와 같은 그림 — 슬라이드의 fig:) */
 
   /* 게이트 기호 8종 — index.html 의 <defs> 를 그대로 재사용 */
   gates: () => '<div class="sl-w sl-g">'
@@ -392,19 +384,6 @@ const ART = {
     + '<div>(1010)<sub>2</sub> = 1×2<sup>3</sup> + 0×2<sup>2</sup> + 1×2<sup>1</sup> + 0×2<sup>0</sup> = 10</div>'
     + '<div>(1D)<sub>16</sub> = 1×16<sup>1</sup> + 13×16<sup>0</sup> = 29</div>'
     + '</div>',
-
-  /* 카노 맵 — 축이 그레이 코드 순서인 것을 보이는 그림 */
-  'kmap-gray': () => slKmap([['','00','01','11','10'],
-                             ['0','1','1','0','0'],
-                             ['1','0','1','1','0']], 'A ＼ BC'),
-  /* 양쪽 끝이 이어져 묶이는 그림 */
-  'kmap-wrap': () => slKmap([['','00','01','11','10'],
-                             ['0','①','0','0','①'],
-                             ['1','①','0','0','①']], 'A ＼ BC'),
-  /* 임의 상태 */
-  'kmap-dc':   () => slKmap([['','00','01','11','10'],
-                             ['0','1','1','×','0'],
-                             ['1','0','1','×','×']], 'A ＼ BC'),
 };
 
 function slSteps(list){
@@ -413,12 +392,15 @@ function slSteps(list){
         + '<div class="bx">' + s.replace('<tspan>','<small>').replace('</tspan>','</small>') + '</div>')
       .join('') + '</div>';
 }
-function slKmap(rows, corner){
-  return '<div class="sl-w"><table class="sl-t sl-k">'
-    + rows.map((r,ri) => '<tr>' + r.map((c,ci) =>
-        (ri===0||ci===0) ? '<th>'+(ri===0&&ci===0?corner:c)+'</th>' : '<td>'+c+'</td>'
-      ).join('') + '</tr>').join('')
-    + '</table></div>';
+
+/* 슬라이드 그림칸 — fig(figs.js 그림)가 있고 표도 있으면 둘을 나란히, 하나만 있으면 그것만 */
+function slFig(s){
+  const f = (s.fig && window.FIG && FIG.has(s.fig)) ? FIG.svgOf(s.fig, { labels:false }) : '';   /* 끝에 퀴즈가 나오므로 정답 이름표는 ? 로 */
+  const tb = s.tbl ? slTable(s.tbl) : '';
+  if(f && tb) return '<div class="sl-w sl-two"><div class="sl-f2">'+f+'</div><div class="sl-t2">'+tb+'</div></div>';
+  if(f) return '<div class="sl-w">'+f+'</div>';
+  if(tb) return '<div class="sl-w">'+tb+'</div>';
+  return (s.art && ART[s.art]) ? ART[s.art]() : '';
 }
 
 function openBoardPro(){
@@ -442,14 +424,20 @@ function openBoardPro(){
     sub:'요점 → <b>발문</b> → 퀴즈 → 정답을 하나씩 열며 진행하고, 화면 어디든 손이나 펜으로 바로 판서할 수 있습니다.<br>'
       + '요점 속 <b>파란 빈칸</b>은 눌러야 답이 보입니다.',
     menu: menu,
-    fig: s => s.tbl ? '<div class="sl-w">'+slTable(s.tbl)+'</div>'
-                    : (s.art && ART[s.art]) ? ART[s.art]() : ''
+    fig: slFig
   });
 }
 
 /* ══════════════════ 배우기 ══════════════════
    정답을 다 보여 주는 단계입니다. 테스트보다 반드시 앞에 둡니다. */
 let learnUnit = null;
+/* 그 카드에 붙은 그림 — figs.js 의 cards 에 카드 제목이 있는 것. 제목 바로 아래에 둔다(누르면 크게) */
+function learnFigs(title){
+  if(!window.FIG || !window.FIGS) return '';
+  const keys = Object.keys(FIGS).filter(k => (FIGS[k].cards||[]).includes(title));
+  if(!keys.length) return '';
+  return '<div class="lfig">' + (keys.length===1 ? FIG.figure(keys[0]) : FIG.gallery(keys)) + '</div>';
+}
 function renderLearn(v){
   const units = [...new Set(LEARN.map(s=>s.u))];
   if(!units.length){ v.appendChild(el('<div class="empty">개념 자료가 아직 없습니다.</div>')); return; }
@@ -473,6 +461,7 @@ function renderLearn(v){
     const c = el('<div class="card">'
       + '<span class="pill">'+s.u+'단원</span>'
       + '<h3>'+s.t+'</h3>'
+      + learnFigs(s.t)
       + '<div class="body">'+s.body+'</div>'
       + '<div class="srcline">📗 '+s.src+'</div>'
       + '<div class="row" style="margin-top:10px"></div></div>');
